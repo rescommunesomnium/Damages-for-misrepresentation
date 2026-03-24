@@ -754,7 +754,7 @@ function selectOption(i) {
     else if (idx === i && i !== q.ans) b.classList.add('wrong');
   });
   const fb = document.getElementById('feedback');
-  fb.textContent = q.feedback;
+  fb.textContent = (i === q.ans ? '' : 'Incorrect. The right answer is option ' + (q.ans + 1) + '. ') + q.feedback;
   fb.className = 'feedback show ' + (i === q.ans ? 'correct' : 'wrong');
   if (i === q.ans) score++;
   document.getElementById('q-score').textContent = score;
