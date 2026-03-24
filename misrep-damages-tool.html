@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Misrepresentation Damages — Interactive Study Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #F8F5EF;
+    --parchment: #EDE8DE;
+    --ink: #1A1714;
+    --ink-mid: #4A4540;
+    --ink-light: #8A847C;
+    --fraud-bg: #FDF0EE;
+    --fraud-border: #C8604A;
+    --fraud-text: #7A2E1E;
+    --inno-bg: #EEF5F0;
+    --inno-border: #3A7D52;
+    --inno-text: #1A4A30;
+    --stat-bg: #EEEDF8;
+    --stat-border: #5A52A8;
+    --stat-text: #2E2878;
+    --accent: #C8604A;
+    --rule: 1px solid rgba(26,23,20,0.12);
+    --radius: 8px;
+    --radius-lg: 14px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  /* Header */
+  .site-header {
+    background: var(--ink);
+    color: var(--cream);
+    padding: 28px 40px 24px;
+    border-bottom: 3px solid var(--accent);
+  }
+  .site-header h1 {
+    font-family: 'Lora', serif;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+  .site-header p {
+    font-size: 13px;
+    color: rgba(248,245,239,0.6);
+    margin-top: 4px;
+  }
+
+  /* Tab nav */
+  .tab-nav {
+    background: var(--parchment);
+    border-bottom: var(--rule);
+    padding: 0 40px;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 14px 18px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-light);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color .15s, border-color .15s;
+    letter-spacing: 0.2px;
+  }
+  .tab-btn:hover { color: var(--ink); }
+  .tab-btn.active { color: var(--ink); border-bottom-color: var(--accent); }
+
+  /* Main */
+  main { max-width: 960px; margin: 0 auto; padding: 36px 40px 60px; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Typography */
+  h2 { font-family: 'Lora', serif; font-size: 20px; font-weight: 600; margin-bottom: 16px; }
+  h3 { font-family: 'Lora', serif; font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+  p { margin-bottom: 10px; }
+  em { font-style: italic; }
+
+  /* Cards */
+  .card {
+    background: #fff;
+    border: var(--rule);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    margin-bottom: 14px;
+  }
+  .card-grid {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 640px) { .card-grid { grid-template-columns: 1fr; } }
+
+  /* Pills */
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+  .pill-fraud { background: var(--fraud-bg); color: var(--fraud-text); border: 1px solid var(--fraud-border); }
+  .pill-inno  { background: var(--inno-bg);  color: var(--inno-text);  border: 1px solid var(--inno-border); }
+  .pill-stat  { background: var(--stat-bg);  color: var(--stat-text);  border: 1px solid var(--stat-border); }
+
+  /* Row in a card */
+  .row-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 14px 0 4px;
+    padding-top: 14px;
+    border-top: var(--rule);
+  }
+  .row-label:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+  .row-body { font-size: 13.5px; line-height: 1.6; }
+
+  /* Blockquote */
+  blockquote {
+    border-left: 3px solid var(--accent);
+    padding: 10px 16px;
+    margin: 16px 0;
+    font-family: 'Lora', serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-mid);
+    background: var(--fraud-bg);
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+  blockquote cite {
+    display: block;
+    font-style: normal;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    color: var(--ink-light);
+    margin-top: 6px;
+  }
+
+  /* Highlight boxes */
+  .box-fraud { background: var(--fraud-bg); border: 1px solid var(--fraud-border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+  .box-inno  { background: var(--inno-bg);  border: 1px solid var(--inno-border);  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+  .box-fraud p, .box-fraud h3 { color: var(--fraud-text); }
+  .box-inno  p, .box-inno  h3 { color: var(--inno-text); }
+
+  /* Metric cards */
+  .metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-bottom: 16px; }
+  .metric { background: #fff; border: var(--rule); border-radius: var(--radius); padding: 12px 14px; }
+  .metric.fraud { background: var(--fraud-bg); border-color: var(--fraud-border); }
+  .metric.inno  { background: var(--inno-bg);  border-color: var(--inno-border); }
+  .metric-label { font-size: 11px; color: var(--ink-light); margin-bottom: 4px; font-weight: 500; }
+  .metric.fraud .metric-label { color: var(--fraud-text); opacity:.8; }
+  .metric.inno  .metric-label { color: var(--inno-text); opacity:.8; }
+  .metric-value { font-size: 22px; font-weight: 500; color: var(--ink); }
+  .metric.fraud .metric-value { color: var(--fraud-text); }
+  .metric.inno  .metric-value { color: var(--inno-text); }
+  @media (max-width: 520px) { .metric-grid { grid-template-columns: 1fr 1fr; } }
+
+  /* Sliders */
+  .slider-row { margin-bottom: 16px; }
+  .slider-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  .slider-label span:first-child { color: var(--ink-mid); }
+  .slider-label span:last-child  { font-weight: 500; color: var(--ink); }
+  input[type=range] {
+    width: 100%; height: 4px; appearance: none; -webkit-appearance: none;
+    background: var(--parchment); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px;
+    border-radius: 50%; background: var(--ink); border: 2px solid var(--cream);
+    box-shadow: 0 0 0 1px var(--ink-mid);
+  }
+
+  /* Step list */
+  .step-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+  .step-list li { display: flex; gap: 12px; align-items: flex-start; }
+  .step-num {
+    min-width: 22px; height: 22px; border-radius: 50%;
+    background: var(--fraud-bg); color: var(--fraud-text);
+    font-size: 11px; font-weight: 500;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 2px; border: 1px solid var(--fraud-border);
+  }
+  .step-text { font-size: 13.5px; line-height: 1.6; }
+
+  /* Footnote */
+  .footnote { font-size: 12px; color: var(--ink-light); margin-top: 10px; line-height: 1.5; }
+
+  /* === WORKED EXAMPLE === */
+  .timeline {
+    position: relative;
+    padding-left: 32px;
+    margin: 20px 0;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px; top: 0; bottom: 0;
+    width: 2px; background: var(--parchment);
+  }
+  .timeline-event {
+    position: relative;
+    margin-bottom: 22px;
+  }
+  .timeline-dot {
+    position: absolute;
+    left: -26px; top: 4px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--ink);
+    background: var(--cream);
+  }
+  .timeline-dot.red { border-color: var(--accent); background: var(--fraud-bg); }
+  .timeline-dot.green { border-color: var(--inno-border); background: var(--inno-bg); }
+  .timeline-date { font-size: 11px; font-weight: 500; color: var(--ink-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .timeline-title { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+  .timeline-body { font-size: 13px; color: var(--ink-mid); line-height: 1.55; }
+
+  .worked-calc {
+    background: var(--ink);
+    color: var(--cream);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    margin: 16px 0;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .worked-calc h3 { color: var(--cream); font-family: 'Lora', serif; font-size: 15px; margin-bottom: 14px; }
+  .calc-row { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 13px; }
+  .calc-row:last-child { border-bottom: none; }
+  .calc-row.total { font-weight: 500; color: #F5C4B3; padding-top: 10px; margin-top: 4px; border-top: 1px solid rgba(245,196,179,0.4); border-bottom: none; }
+  .calc-label { color: rgba(248,245,239,0.7); }
+  .calc-value { font-weight: 500; font-family: 'Lora', serif; }
+  .calc-value.neg { color: #F09595; }
+  .calc-value.pos { color: #9FE1CB; }
+
+  /* === GLOSSARY === */
+  .glossary-search {
+    width: 100%; padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    border: var(--rule);
+    border-radius: var(--radius);
+    background: #fff;
+    color: var(--ink);
+    outline: none;
+    margin-bottom: 20px;
+    transition: border-color .15s;
+  }
+  .glossary-search:focus { border-color: var(--accent); }
+
+  .glossary-item { border-bottom: var(--rule); padding: 14px 0; }
+  .glossary-item:last-child { border-bottom: none; }
+  .glossary-term { font-family: 'Lora', serif; font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .glossary-def  { font-size: 13.5px; color: var(--ink-mid); line-height: 1.6; }
+  .glossary-case { font-size: 12px; color: var(--ink-light); margin-top: 4px; font-style: italic; }
+  .glossary-tag  { display: inline-block; font-size: 10px; font-weight: 500; padding: 1px 7px; border-radius: 10px; margin-right: 4px; vertical-align: middle; }
+  .tag-fraud { background: var(--fraud-bg); color: var(--fraud-text); }
+  .tag-inno  { background: var(--inno-bg); color: var(--inno-text); }
+  .tag-both  { background: var(--stat-bg); color: var(--stat-text); }
+  .no-results { font-size: 14px; color: var(--ink-light); padding: 20px 0; display: none; }
+
+  /* === SELF-TEST === */
+  .quiz-progress { font-size: 12px; color: var(--ink-light); margin-bottom: 20px; }
+  .quiz-progress span { font-weight: 500; color: var(--ink); }
+
+  .question-card {
+    background: #fff;
+    border: var(--rule);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .question-num { font-size: 11px; color: var(--ink-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .question-text { font-family: 'Lora', serif; font-size: 16px; line-height: 1.55; margin-bottom: 18px; }
+  .options { display: flex; flex-direction: column; gap: 8px; }
+  .option-btn {
+    text-align: left; width: 100%; padding: 12px 16px;
+    background: var(--cream); border: 1px solid var(--parchment);
+    border-radius: var(--radius); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 13.5px; color: var(--ink);
+    transition: background .12s, border-color .12s;
+    line-height: 1.5;
+  }
+  .option-btn:hover:not(:disabled) { background: var(--parchment); border-color: rgba(26,23,20,0.2); }
+  .option-btn.correct { background: var(--inno-bg); border-color: var(--inno-border); color: var(--inno-text); font-weight: 500; }
+  .option-btn.wrong   { background: var(--fraud-bg); border-color: var(--fraud-border); color: var(--fraud-text); }
+  .option-btn:disabled { cursor: default; }
+
+  .feedback {
+    display: none; margin-top: 14px; padding: 12px 16px;
+    border-radius: var(--radius); font-size: 13px; line-height: 1.6;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct { background: var(--inno-bg); color: var(--inno-text); border: 1px solid var(--inno-border); }
+  .feedback.wrong   { background: var(--fraud-bg); color: var(--fraud-text); border: 1px solid var(--fraud-border); }
+
+  .quiz-nav { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .btn-primary {
+    padding: 10px 20px; background: var(--ink); color: var(--cream);
+    border: none; border-radius: var(--radius); font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .15s;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-primary:disabled { opacity: 0.35; cursor: default; }
+  .btn-secondary {
+    padding: 10px 20px; background: transparent; color: var(--ink);
+    border: 1px solid rgba(26,23,20,0.25); border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: background .12s;
+  }
+  .btn-secondary:hover { background: var(--parchment); }
+
+  .score-card {
+    background: var(--ink); color: var(--cream);
+    border-radius: var(--radius-lg); padding: 32px;
+    text-align: center; margin-top: 20px; display: none;
+  }
+  .score-card.show { display: block; }
+  .score-big { font-family: 'Lora', serif; font-size: 52px; font-weight: 600; color: #F5C4B3; line-height: 1; margin: 12px 0; }
+  .score-label { font-size: 14px; color: rgba(248,245,239,0.65); margin-bottom: 20px; }
+
+  /* Chart wrapper */
+  .chart-wrap { position: relative; width: 100%; height: 220px; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1>Misrepresentation — Damages</h1>
+  <p>Fraudulent &amp; innocent misrepresentation · Misrepresentation Act 1967 · Smith New Court Securities Ltd v Scrimgeour Vickers [1997]</p>
+</header>
+
+<nav class="tab-nav" role="tablist">
+  <button class="tab-btn active" onclick="switchTab('compare',this)" role="tab">Doctrine</button>
+  <button class="tab-btn" onclick="switchTab('scenario',this)" role="tab">Scenario explorer</button>
+  <button class="tab-btn" onclick="switchTab('snc',this)" role="tab">Smith New Court</button>
+  <button class="tab-btn" onclick="switchTab('worked',this)" role="tab">Worked example</button>
+  <button class="tab-btn" onclick="switchTab('glossary',this)" role="tab">Glossary</button>
+  <button class="tab-btn" onclick="switchTab('quiz',this)" role="tab">Self-test</button>
+</nav>
+
+<main>
+
+<!-- ===================== TAB 1: DOCTRINE ===================== -->
+<section id="panel-compare" class="panel active">
+  <h2>The two regimes compared</h2>
+  <div class="card-grid">
+    <div class="card">
+      <span class="pill pill-fraud">Fraudulent misrepresentation</span><br>
+      <small style="font-size:12px;color:var(--ink-light)">Deceit / s.2(1) Misrepresentation Act 1967</small>
+      <div class="row-label">Basis</div>
+      <div class="row-body">Tort of deceit. Where s.2(1) applies (negligent misrep), the same measure is used by statutory fiction — <em>Royscot Trust v Rogerson</em> [1991].</div>
+      <div class="row-label">Measure of damages</div>
+      <div class="row-body">All actual loss flowing from the transaction. The aim is to restore C to their <strong>pre-transaction</strong> position, not to what their position would have been under the contract (<em>Doyle v Olby (Ironmongers) Ltd</em> [1969]).</div>
+      <div class="row-label">Remoteness test</div>
+      <div class="row-body"><strong>Directness only</strong> — not reasonable foreseeability. All direct consequences are recoverable even if unforeseeable. This is far wider than the contract rule.</div>
+      <div class="row-label">Pregnant-with-the-loss rule</div>
+      <div class="row-body" style="color:var(--fraud-text)"><strong>Applies.</strong> The transaction itself is the damage-generating event. Subsequent falls in value — even if caused by an entirely separate, unforeseeable event — are recoverable so long as C was locked in from contract date (<em>Smith New Court</em>).</div>
+      <div class="row-label">Contributory negligence</div>
+      <div class="row-body">Not available against the tort of deceit: <em>Standard Chartered Bank v Pakistan National Shipping Corp (No 2)</em> [2002]. Available under s.2(1) on some authorities.</div>
+      <div class="row-label">Consequential losses</div>
+      <div class="row-body">Recoverable — e.g. loss of profits, wasted expenditure on the asset, costs of financing.</div>
+    </div>
+
+    <div class="card">
+      <span class="pill pill-inno">Innocent misrepresentation</span><br>
+      <small style="font-size:12px;color:var(--ink-light)">s.2(2) Misrepresentation Act 1967</small>
+      <div class="row-label">Basis</div>
+      <div class="row-body">Statute only. The court has a discretion to award damages <em>in lieu of rescission</em> where it would be equitable to do so. Primary remedy is rescission.</div>
+      <div class="row-label">Measure of damages</div>
+      <div class="row-body">Generally the overvaluation at contract date — the difference between the price paid and the true value of what was received (<em>William Sindall plc v Cambridgeshire CC</em> [1994]). <strong>Contractual flavour.</strong></div>
+      <div class="row-label">Remoteness test</div>
+      <div class="row-body">Closer to reasonable contemplation at the time of contracting — no direct analogy to deceit's wider rule.</div>
+      <div class="row-label">Pregnant-with-the-loss rule</div>
+      <div class="row-body" style="color:var(--inno-text)"><strong>Does not apply.</strong> Loss is assessed at contract date. Subsequent market falls caused by unforeseeable events are not recoverable — the overvaluation figure is the ceiling.</div>
+      <div class="row-label">Contributory negligence</div>
+      <div class="row-body">Available. The court may reduce damages to reflect C's own fault in entering the transaction.</div>
+      <div class="row-label">Consequential losses</div>
+      <div class="row-body">Generally not recoverable — s.2(2) is a substitute for rescission, not a comprehensive damages regime.</div>
+    </div>
+  </div>
+  <p class="footnote">Note: <em>Royscot</em> is controversial. Some academics and judges argue the "as if fraudulent" treatment of s.2(1) was a misreading of the legislative intent, but it remains binding Court of Appeal authority. For a detailed critical account drawing together the critiques of Treitel, Atiyah, and others, see J Devenney, 'Re-Examining Damages for Fraudulent Misrepresentation' in <em>Commercial Contract Law</em> (CUP 2012) <strong>(On MyStudies)</strong>.</p>
+</section>
+
+<!-- ===================== TAB 2: SCENARIO ===================== -->
+<section id="panel-scenario" class="panel">
+  <h2>Scenario explorer</h2>
+  <p style="font-size:14px;color:var(--ink-mid);margin-bottom:24px;">Adjust the three values to model a transaction and see how the two regimes diverge. The gap between them is the <em>Smith New Court</em> premium.</p>
+
+  <div class="slider-row">
+    <div class="slider-label"><span>Price paid (induced by misrep)</span><span id="s-price-out">£1,000,000</span></div>
+    <input type="range" id="s-price" min="100000" max="5000000" step="50000" value="1000000" oninput="updateScenario()">
+  </div>
+  <div class="slider-row">
+    <div class="slider-label"><span>True value at contract date</span><span id="s-true-out">£700,000</span></div>
+    <input type="range" id="s-true" min="50000" max="4950000" step="50000" value="700000" oninput="updateScenario()">
+  </div>
+  <div class="slider-row">
+    <div class="slider-label"><span>Value at disposal (after subsequent fall)</span><span id="s-disp-out">£200,000</span></div>
+    <input type="range" id="s-disp" min="0" max="4000000" step="50000" value="200000" oninput="updateScenario()">
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric">
+      <div class="metric-label">Overvaluation at contract date</div>
+      <div class="metric-value" id="m-overval">£300,000</div>
+    </div>
+    <div class="metric fraud">
+      <div class="metric-label">Fraudulent / s.2(1) recovery</div>
+      <div class="metric-value" id="m-fraud">£800,000</div>
+    </div>
+    <div class="metric inno">
+      <div class="metric-label">Innocent s.2(2) recovery</div>
+      <div class="metric-value" id="m-inno">£300,000</div>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <canvas id="scenario-chart"></canvas>
+  </div>
+
+  <p class="footnote" style="margin-top:12px">Fraudulent measure = price paid minus disposal value (all loss from the transaction). Innocent s.2(2) measure = overvaluation at contract date only. The difference is the additional loss locked in by the transaction — the <em>Smith New Court</em> pregnant-with-the-loss premium.</p>
+</section>
+
+<!-- ===================== TAB 3: SMITH NEW COURT ===================== -->
+<section id="panel-snc" class="panel">
+  <h2>Smith New Court Securities Ltd v Scrimgeour Vickers [1997] AC 254</h2>
+
+  <div class="card" style="display:flex;gap:16px;align-items:flex-start;margin-bottom:20px;">
+    <div>
+      <p style="font-size:13px;font-weight:500;margin-bottom:4px;">House of Lords · Lord Browne-Wilkinson</p>
+      <p style="font-size:13px;color:var(--ink-mid)">The leading authority on the measure of damages in deceit and the foundational source of the <em>pregnant-with-the-loss</em> principle.</p>
+    </div>
+  </div>
+
+  <h3>The facts</h3>
+  <p style="font-size:14px;margin-bottom:14px">Smith New Court (SNC) were fraudulently induced by Scrimgeour's agent to purchase 28.41 million Ferranti shares at 82.25p per share — well above the market-making price. The fraudster falsely claimed two other bidders were competing. Shortly after purchase, and before SNC could sell, a completely separate and entirely unknown fraud at Ferranti itself came to light. The Ferranti share price collapsed. SNC eventually sold for around 30–44p per share.</p>
+
+  <blockquote>
+    "The transaction was a continuing one and the plaintiff was locked into an asset which was from the outset pregnant with the loss."
+    <cite>— Lord Browne-Wilkinson, Smith New Court [1997] AC 254 at 267</cite>
+  </blockquote>
+
+  <h3 style="margin-top:20px">The legal question</h3>
+  <p style="font-size:14px;margin-bottom:14px">Could SNC recover not just the overvaluation at contract date (the difference between 82.25p and the true market value), but the full loss eventually suffered — including the loss caused by the entirely unforeseeable Ferranti fraud?</p>
+
+  <h3>The House of Lords' reasoning</h3>
+  <ul class="step-list">
+    <li><div class="step-num">1</div><div class="step-text"><strong>Entry into the transaction is the damage-generating act.</strong> The deceit caused SNC to enter the contract. That entry, not the subsequent Ferranti fraud, is what the law must undo.</div></li>
+    <li><div class="step-num">2</div><div class="step-text"><strong>Directness, not foreseeability.</strong> Remoteness in deceit is governed by directness (<em>Doyle v Olby</em>). The secondary collapse was a direct consequence of being locked into an asset bought at an inflated price.</div></li>
+    <li><div class="step-num">3</div><div class="step-text"><strong>No causation break.</strong> SNC could not have sold at or near true value at any point before the Ferranti fraud became public. The asset was always worth less than they paid. There was no "clean exit" window in which the chain could be severed.</div></li>
+    <li><div class="step-num">4</div><div class="step-text"><strong>Full loss recoverable.</strong> SNC were entitled to recover the price paid less the eventual proceeds, including all the loss caused by the secondary Ferranti fraud they had no knowledge of.</div></li>
+  </ul>
+
+  <div class="card-grid" style="margin-top:20px">
+    <div class="box-fraud">
+      <h3>Rule applies when…</h3>
+      <p style="font-size:13px">C paid above true value at contract date AND was locked in — unable to sell at or near true value — when a further event (foreseeable or not) depressed value further.</p>
+    </div>
+    <div class="box-inno">
+      <h3>Rule does NOT apply when…</h3>
+      <p style="font-size:13px">There was a window in which C could have sold at or near true value before the secondary event. A "break" in the chain severs the further losses. The fraudster is not liable for loss C could have avoided.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="row-label">Contrast with innocent misrepresentation</div>
+    <div class="row-body">Under s.2(2), damages are assessed at contract date. The subsequent Ferranti-type collapse would not be recoverable. The s.2(2) measure is essentially the overvaluation — what C overpaid — and nothing more. This is one of the most practically significant differences between the two regimes.</div>
+    <div class="row-label">The Royscot extension</div>
+    <div class="row-body">Because s.2(1) of the 1967 Act is treated as equivalent to fraud for damages purposes (<em>Royscot Trust v Rogerson</em>), the <em>Smith New Court</em> rule applies to negligent misrepresentation under s.2(1) too — even though there is no actual dishonesty. This extension remains academically contested. For a detailed critical account drawing together the critiques of Treitel, Atiyah, and others, see J Devenney, 'Re-Examining Damages for Fraudulent Misrepresentation' in <em>Commercial Contract Law</em> (CUP 2012) <strong>(On MyStudies)</strong>.</div>
+  </div>
+</section>
+
+<!-- ===================== TAB 4: WORKED EXAMPLE ===================== -->
+<section id="panel-worked" class="panel">
+  <h2>Worked example — the Hartley shares</h2>
+  <p style="font-size:14px;color:var(--ink-mid);margin-bottom:20px;">A constructed problem illustrating both regimes and the <em>Smith New Court</em> principle. Work through the timeline, then check the calculations.</p>
+
+  <div class="card">
+    <h3 style="margin-bottom:10px">The facts</h3>
+    <p style="font-size:13.5px">In January 2022, <strong>Petra</strong> purchases 500,000 shares in Hartley plc from <strong>Marcus</strong> for <strong>£2.00 per share</strong> (total: £1,000,000). Marcus tells Petra that Hartley holds a confirmed government infrastructure contract worth £50m. This is false — Marcus knows the contract has not been awarded.</p>
+    <p style="font-size:13.5px;margin-top:8px">At the date of purchase, the true value of the shares (absent the false representation) is <strong>£1.40 per share</strong>.</p>
+    <p style="font-size:13.5px;margin-top:8px">In September 2022, entirely separately, Hartley's key supplier goes insolvent — an event completely unconnected to the misrepresentation and entirely unforeseeable. The share price collapses. Petra eventually sells in December 2022 at <strong>£0.30 per share</strong>.</p>
+  </div>
+
+  <h3 style="margin-top:24px;margin-bottom:14px">Timeline</h3>
+  <div class="timeline">
+    <div class="timeline-event">
+      <div class="timeline-dot red"></div>
+      <div class="timeline-date">January 2022</div>
+      <div class="timeline-title">The fraudulent misrepresentation and purchase</div>
+      <div class="timeline-body">Petra pays £2.00/share. True value is £1.40/share. Overvaluation = 60p per share. The transaction is already "pregnant with the loss" — Petra paid £300,000 more than the shares were worth.</div>
+    </div>
+    <div class="timeline-event">
+      <div class="timeline-dot"></div>
+      <div class="timeline-date">Jan–Sep 2022</div>
+      <div class="timeline-title">Petra is locked in</div>
+      <div class="timeline-body">Petra cannot sell at or near true value. The shares continue to trade around £1.40, but she still cannot recover her overpayment.</div>
+    </div>
+    <div class="timeline-event">
+      <div class="timeline-dot red"></div>
+      <div class="timeline-date">September 2022</div>
+      <div class="timeline-title">Unforeseeable secondary event — supplier insolvency</div>
+      <div class="timeline-body">Hartley's key supplier collapses. Entirely unconnected to Marcus's fraud. Unforeseeable. Share price falls sharply.</div>
+    </div>
+    <div class="timeline-event">
+      <div class="timeline-dot green"></div>
+      <div class="timeline-date">December 2022</div>
+      <div class="timeline-title">Petra sells at £0.30/share</div>
+      <div class="timeline-body">Total proceeds: £150,000. Total loss on the transaction: £850,000.</div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:8px;margin-bottom:14px">The calculations</h3>
+
+  <div class="card-grid">
+    <div class="worked-calc">
+      <h3>Fraudulent misrepresentation / s.2(1)</h3>
+      <div class="calc-row"><span class="calc-label">Price paid</span><span class="calc-value">£1,000,000</span></div>
+      <div class="calc-row"><span class="calc-label">Less: disposal proceeds</span><span class="calc-value neg">−£150,000</span></div>
+      <div class="calc-row total"><span class="calc-label">Total recovery</span><span class="calc-value pos">£850,000</span></div>
+      <p style="font-size:12px;color:rgba(248,245,239,0.55);margin-top:12px">Includes the £500,000 attributable to the unforeseeable supplier insolvency. Recoverable because the transaction locked Petra in — Smith New Court applies. No foreseeability required.</p>
+    </div>
+    <div class="worked-calc" style="background:var(--inno-bg);color:var(--ink)">
+      <h3 style="color:var(--ink)">Innocent misrepresentation / s.2(2)</h3>
+      <div class="calc-row" style="border-bottom:1px solid rgba(26,23,20,0.1)"><span class="calc-label" style="color:var(--ink-light)">Price paid</span><span class="calc-value" style="color:var(--ink)">£1,000,000</span></div>
+      <div class="calc-row" style="border-bottom:1px solid rgba(26,23,20,0.1)"><span class="calc-label" style="color:var(--ink-light)">Less: true value at contract date</span><span style="font-weight:500;color:var(--fraud-text)">−£700,000</span></div>
+      <div class="calc-row" style="border-top:1px solid rgba(58,125,82,0.3);padding-top:10px;margin-top:4px;border-bottom:none;font-weight:500"><span style="color:var(--inno-text)">Total recovery</span><span style="color:var(--inno-text);font-family:'Lora',serif;font-size:16px">£300,000</span></div>
+      <p style="font-size:12px;color:var(--ink-light);margin-top:12px">Capped at the overvaluation at contract date. The £500,000 attributable to the supplier insolvency is not recoverable — Smith New Court does not apply. Loss assessed at January 2022 only.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:6px;background:var(--fraud-bg);border-color:var(--fraud-border)">
+    <p style="font-size:13.5px;color:var(--fraud-text)"><strong>The gap:</strong> £550,000. That is the additional exposure Marcus faces for actual fraud (or a s.2(1) claim) compared to a s.2(2) claim. The entire difference arises from the <em>Smith New Court</em> rule — Petra was locked into a transaction that was from the outset pregnant with the eventual loss.</p>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>Discussion questions</h3>
+    <ol style="padding-left:20px;font-size:13.5px;line-height:1.8;color:var(--ink-mid)">
+      <li>Would the answer differ if Petra could have sold at £1.40 in March 2022 but chose not to? Consider the causation break point in <em>Smith New Court</em>.</li>
+      <li>If Marcus had merely been careless (not dishonest), how does <em>Royscot Trust v Rogerson</em> affect the analysis? Do you think that result is defensible?</li>
+      <li>Petra contributed to her loss by not investigating the contract claim. Does this affect anything? Compare the fraud and s.2(1) positions.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ===================== TAB 5: GLOSSARY ===================== -->
+<section id="panel-glossary" class="panel">
+  <h2>Key terms &amp; concepts</h2>
+  <input type="text" class="glossary-search" id="gloss-search" placeholder="Search terms…" oninput="filterGlossary()" autocomplete="off">
+  <div id="glossary-list"></div>
+  <p class="no-results" id="no-results">No matching terms found.</p>
+</section>
+
+<!-- ===================== TAB 6: QUIZ ===================== -->
+<section id="panel-quiz" class="panel">
+  <h2>Self-test</h2>
+  <p style="font-size:14px;color:var(--ink-mid);margin-bottom:20px;">Ten questions on misrepresentation damages. Select an answer to see immediate feedback, then move to the next question.</p>
+
+  <div class="quiz-progress">Question <span id="q-num">1</span> of <span id="q-total">10</span> &nbsp;·&nbsp; Score: <span id="q-score">0</span></div>
+
+  <div id="q-container"></div>
+
+  <div class="quiz-nav">
+    <button class="btn-primary" id="btn-next" onclick="nextQ()" disabled>Next question</button>
+    <button class="btn-secondary" onclick="restartQuiz()">Restart</button>
+  </div>
+
+  <div class="score-card" id="score-card">
+    <p style="font-size:14px;color:rgba(248,245,239,0.65)">Final score</p>
+    <div class="score-big" id="score-big">0/10</div>
+    <p class="score-label" id="score-msg"></p>
+    <button class="btn-secondary" style="margin-top:8px" onclick="restartQuiz()">Try again</button>
+  </div>
+</section>
+
+</main>
+
+<script>
+/* ===== TAB SWITCHING ===== */
+function switchTab(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'scenario') updateScenario();
+  if (id === 'glossary') renderGlossary();
+  if (id === 'quiz' && !quizStarted) startQuiz();
+}
+
+/* ===== SCENARIO EXPLORER ===== */
+const fmt = n => '£' + Math.round(n).toLocaleString('en-GB');
+let scenChart;
+
+function updateScenario() {
+  let price = +document.getElementById('s-price').value;
+  let trueVal = +document.getElementById('s-true').value;
+  let disp = +document.getElementById('s-disp').value;
+  trueVal = Math.min(trueVal, price - 50000);
+  disp = Math.min(disp, trueVal);
+  document.getElementById('s-price-out').textContent = fmt(price);
+  document.getElementById('s-true-out').textContent = fmt(trueVal);
+  document.getElementById('s-disp-out').textContent = fmt(disp);
+  const overval = price - trueVal;
+  const fraud = price - disp;
+  const inno = overval;
+  document.getElementById('m-overval').textContent = fmt(overval);
+  document.getElementById('m-fraud').textContent = fmt(fraud);
+  document.getElementById('m-inno').textContent = fmt(inno);
+  const labels = ['Price paid', 'True value\nat contract', 'Value at\ndisposal'];
+  const data = [price, trueVal, disp];
+  if (!scenChart) {
+    scenChart = new Chart(document.getElementById('scenario-chart'), {
+      type: 'bar',
+      data: { labels, datasets: [{ data, backgroundColor: ['#B5D4F4','#9FE1CB','#F5C4B3'], borderColor: ['#378ADD','#1D9E75','#D85A30'], borderWidth: 1.5, borderRadius: 4 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.parsed.y) } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#8A847C' } },
+          y: { grid: { color: 'rgba(26,23,20,0.07)' }, ticks: { font: { size: 11 }, color: '#8A847C', callback: v => v >= 1e6 ? '£'+(v/1e6).toFixed(1)+'m' : v >= 1000 ? '£'+(v/1000).toFixed(0)+'k' : '£'+v } }
+        },
+        animation: { duration: 180 }
+      }
+    });
+  } else {
+    scenChart.data.datasets[0].data = data;
+    scenChart.update('active');
+  }
+}
+
+/* ===== GLOSSARY ===== */
+const glossaryData = [
+  { term: 'Misrepresentation', def: 'A false statement of existing fact (not opinion, law, or future intention) made by one party to the other, which induces the representee to enter the contract.', tag: 'both', case: 'Bisset v Wilkinson [1927]; Edgington v Fitzmaurice (1885)' },
+  { term: 'Fraudulent misrepresentation', def: 'A false statement made knowingly, without belief in its truth, or recklessly as to whether it is true or false. Dishonesty is required.', tag: 'fraud', case: 'Derry v Peek (1889) — the foundational definition from Lord Herschell' },
+  { term: 'Negligent misrepresentation (s.2(1) MA 1967)', def: 'A false statement where D cannot prove reasonable grounds for believing it true. Statutory cause of action: no need to show a special relationship (contrast Hedley Byrne). Damages assessed as if fraudulent under Royscot.', tag: 'fraud', case: 'Royscot Trust Ltd v Rogerson [1991] QB 297' },
+  { term: 'Innocent misrepresentation (s.2(2) MA 1967)', def: 'A misrepresentation that is neither fraudulent nor negligent. Primary remedy is rescission. Court may award damages in lieu of rescission at its discretion.', tag: 'inno', case: 'William Sindall plc v Cambridgeshire CC [1994]' },
+  { term: 'Rescission', def: 'The remedy of unwinding the contract ab initio, restoring both parties to their pre-contract positions. Available for all types of misrepresentation but subject to bars including affirmation, lapse of time, third-party rights, and impossibility of restitution.', tag: 'both', case: '' },
+  { term: 'Pregnant with the loss', def: 'The principle from Smith New Court that a transaction induced by fraud "locks in" the claimant so that all subsequent falls in value (even if unforeseeable and caused by independent events) are recoverable, because the entry into the transaction is itself the damage-generating act.', tag: 'fraud', case: 'Smith New Court Securities Ltd v Scrimgeour Vickers [1997] AC 254' },
+  { term: 'Directness (remoteness in deceit)', def: 'In the tort of deceit, all direct consequences of the fraud are recoverable regardless of whether they were foreseeable. This is wider than the foreseeability test used in negligence and contract.', tag: 'fraud', case: 'Doyle v Olby (Ironmongers) Ltd [1969] 2 QB 158' },
+  { term: 'Overvaluation', def: 'The difference between the price actually paid and the true value of the asset at the date of the contract. This is the ceiling on recovery under s.2(2) and the starting point for calculating fraud losses.', tag: 'both', case: 'William Sindall plc v Cambridgeshire CC [1994]' },
+  { term: 'Pre-transaction position', def: 'The state C would have been in had they never entered the contract. The aim of tortious damages in deceit. Distinguished from the expectation interest (putting C where they would be if the contract had been performed).', tag: 'fraud', case: 'East v Maurer [1991]; Doyle v Olby [1969]' },
+  { term: 'Royscot fiction', def: 'The Court of Appeal\'s holding that s.2(1) of the MA 1967 requires damages to be assessed "as if" the representation had been made fraudulently, even without dishonesty. Extends Doyle and Smith New Court to negligent misrepresentation. Academically contested — Treitel changed his view after co-authoring the original 1967 MLR article, and the decision has been widely criticised as an overly literal misreading of Parliament\'s intent.', tag: 'fraud', case: 'Royscot Trust Ltd v Rogerson [1991]; J Devenney, \'Re-Examining Damages for Fraudulent Misrepresentation\' in Commercial Contract Law (CUP 2012) (On MyStudies)' },
+  { term: 'Contributory negligence', def: 'A partial defence reducing damages to reflect C\'s own fault. Cannot be raised against the tort of deceit (Standard Chartered). May be available under s.2(1) and s.2(2).', tag: 'inno', case: 'Standard Chartered Bank v Pakistan National Shipping Corp (No 2) [2002]' },
+  { term: 'Causation break', def: 'A point at which C could have exited the transaction at or near true value, before the subsequent loss-causing event. If such a break exists, the chain of causation is severed and the post-break losses are not recoverable under Smith New Court.', tag: 'fraud', case: 'Smith New Court [1997] per Lord Browne-Wilkinson' },
+  { term: 'Damages in lieu of rescission', def: 'The s.2(2) discretionary remedy. Awarded when the court considers it equitable to do so — typically where the misrepresentation was minor and rescission would be disproportionate. Measure is the overvaluation at contract date.', tag: 'inno', case: 'William Sindall plc v Cambridgeshire CC [1994]' },
+];
+
+let glossaryRendered = false;
+function renderGlossary() {
+  if (glossaryRendered) return;
+  glossaryRendered = true;
+  renderGlossaryItems(glossaryData);
+}
+function renderGlossaryItems(items) {
+  const list = document.getElementById('glossary-list');
+  list.innerHTML = items.map(g => `
+    <div class="glossary-item" data-term="${g.term.toLowerCase()}">
+      <div class="glossary-term">${g.term}
+        <span class="glossary-tag tag-${g.tag}">${g.tag === 'fraud' ? 'Fraudulent' : g.tag === 'inno' ? 'Innocent' : 'Both regimes'}</span>
+      </div>
+      <div class="glossary-def">${g.def}</div>
+      ${g.case ? `<div class="glossary-case">${g.case}</div>` : ''}
+    </div>
+  `).join('');
+}
+function filterGlossary() {
+  renderGlossary();
+  const q = document.getElementById('gloss-search').value.toLowerCase().trim();
+  let visible = 0;
+  document.querySelectorAll('.glossary-item').forEach(el => {
+    const match = !q || el.dataset.term.includes(q) || el.textContent.toLowerCase().includes(q);
+    el.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  document.getElementById('no-results').style.display = visible === 0 ? 'block' : 'none';
+}
+
+/* ===== QUIZ ===== */
+const questions = [
+  { q: 'What is the primary aim of damages for fraudulent misrepresentation?', opts: ['To put C in the position they would have been in had the contract been performed','To restore C to their pre-transaction position','To compensate C for loss of bargain only','To award a sum equivalent to the contract price'], ans: 1, feedback: 'Correct. The tort of deceit aims to put C back where they were before the transaction — not to enforce the expectation interest. See Doyle v Olby [1969].' },
+  { q: 'Under s.2(2) of the Misrepresentation Act 1967, when may a court award damages in lieu of rescission?', opts: ['Only where the misrepresentation was fraudulent','Whenever C proves loss exceeding the overvaluation','Where it is equitable to do so, even if the misrepresentation was innocent','As of right, once C elects damages over rescission'], ans: 2, feedback: 'Correct. Section 2(2) is a discretionary remedy. The court must consider whether it is equitable to award damages in lieu of rescission — it is not available as of right.' },
+  { q: 'In Smith New Court v Scrimgeour Vickers, Smith New Court were induced by fraud to purchase shares. Subsequently, and entirely unconnected to the fraud, the target company\'s share price collapsed due to a separate fraud at that company. Were the losses from the secondary collapse recoverable?', opts: ['No — the secondary fraud broke the chain of causation','No — it was not foreseeable at the time of the misrepresentation','Yes — because the transaction locked SNC into the asset from the outset','Yes — but only to the extent the secondary event was foreseeable'], ans: 2, feedback: 'Correct. The House of Lords held the full loss was recoverable. The transaction itself was the damage-generating act, and SNC were locked in. Foreseeability is irrelevant in deceit — directness is the test.' },
+  { q: 'What is the remoteness test for damages in the tort of deceit?', opts: ['Reasonable foreseeability at the time of the tort','Direct consequence of the fraud, whether foreseeable or not','Reasonable contemplation of both parties at the time of contracting','Reasonable foreseeability at the time of the loss'], ans: 1, feedback: 'Correct. In deceit, all direct consequences of the fraud are recoverable, regardless of foreseeability. This is materially wider than the remoteness rules in contract or negligence.' },
+  { q: 'Royscot Trust v Rogerson [1991] held that damages under s.2(1) of the Misrepresentation Act 1967 should be assessed:', opts: ['On the contractual expectation basis','On the same basis as negligence under Hedley Byrne','As if the misrepresentation had been made fraudulently','At the court\'s discretion, as under s.2(2)'], ans: 2, feedback: 'Correct (and controversial). The Court of Appeal held the statutory wording of s.2(1) requires the fiction that the representor had been fraudulent — meaning the Smith New Court measure applies even without dishonesty. For a detailed critical account drawing together the critiques of Treitel, Atiyah, and others, see J Devenney, \'Re-Examining Damages for Fraudulent Misrepresentation\' in Commercial Contract Law (CUP 2012) (On MyStudies).' },
+  { q: 'Can contributory negligence be pleaded as a partial defence to the tort of deceit?', opts: ['Yes, under the Law Reform (Contributory Negligence) Act 1945','No — it is not available against fraudulent conduct','Yes, but only where C\'s negligence was the primary cause','Yes, at the court\'s discretion'], ans: 1, feedback: 'Correct. The House of Lords in Standard Chartered Bank v Pakistan National Shipping Corp (No 2) [2002] confirmed that contributory negligence is not available against the tort of deceit. The fraudster cannot rely on the victim\'s carelessness.' },
+  { q: 'Petra pays £500,000 for shares whose true value at contract date is £350,000. After purchase, an unforeseeable regulatory change causes the shares to fall to £50,000. Petra sues for fraudulent misrepresentation. What is her most likely recovery?', opts: ['£150,000 (the overvaluation only)','£450,000 (price paid minus disposal value)','£300,000 (loss from the regulatory change only)','£500,000 (full price paid)'], ans: 1, feedback: 'Correct. Under the fraud measure (Smith New Court), Petra recovers £500,000 − £50,000 = £450,000. She was locked into the transaction; the unforeseeable regulatory change does not break the chain. The s.2(2) figure would only be £150,000.' },
+  { q: 'Under s.2(2) of the Misrepresentation Act 1967, what is the generally accepted measure of damages?', opts: ['All losses flowing from the transaction, including consequential losses','The difference between the contract price and true value at the date of contract','The value the contract would have had if the representation had been true','Expectation damages assessed at the date of trial'], ans: 1, feedback: 'Correct. The William Sindall approach treats s.2(2) damages as the overvaluation — what C overpaid at contract date. Unlike the fraud measure, subsequent unforeseeable losses and consequential losses are generally not within this remedy.' },
+  { q: 'What is the "causation break" in Smith New Court?', opts: ['The moment at which C discovers the misrepresentation','A point at which C could have sold the asset at or near its true value before the subsequent loss-causing event','The point at which D\'s fraud became public knowledge','The date on which rescission becomes impossible'], ans: 1, feedback: 'Correct. Lord Browne-Wilkinson noted that if there had been a window in which SNC could have sold at true value before the secondary Ferranti fraud emerged, the chain of causation would have been broken and the post-break losses severed.' },
+  { q: 'Which statement best describes the practical significance of the distinction between the fraud / s.2(1) measure and the s.2(2) measure?', opts: ['It is largely theoretical — courts award the same sum in practice','It matters most when subsequent unforeseeable events cause additional loss after the contract date, inflating the total loss beyond the overvaluation','It is significant only where the claimant is a market professional','It matters only where the representor was dishonest'], ans: 1, feedback: 'Correct. The regimes produce the same figure (the overvaluation) when no subsequent events intervene. The divergence — sometimes very large — arises precisely when Smith New Court-type losses occur: losses caused by events after contracting that are beyond the original overvaluation.' },
+];
+
+let quizStarted = false, currentQ = 0, score = 0, answered = false;
+
+function startQuiz() {
+  quizStarted = true;
+  currentQ = 0; score = 0; answered = false;
+  document.getElementById('q-total').textContent = questions.length;
+  document.getElementById('score-card').classList.remove('show');
+  renderQ();
+}
+
+function renderQ() {
+  if (currentQ >= questions.length) { showScore(); return; }
+  const q = questions[currentQ];
+  document.getElementById('q-num').textContent = currentQ + 1;
+  document.getElementById('q-score').textContent = score;
+  document.getElementById('btn-next').disabled = true;
+  answered = false;
+  document.getElementById('q-container').innerHTML = `
+    <div class="question-card">
+      <div class="question-num">Question ${currentQ + 1}</div>
+      <div class="question-text">${q.q}</div>
+      <div class="options">
+        ${q.opts.map((o,i) => `<button class="option-btn" onclick="selectOption(${i})">${o}</button>`).join('')}
+      </div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+  `;
+}
+
+function selectOption(i) {
+  if (answered) return;
+  answered = true;
+  const q = questions[currentQ];
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach((b,idx) => {
+    b.disabled = true;
+    if (idx === q.ans) b.classList.add('correct');
+    else if (idx === i && i !== q.ans) b.classList.add('wrong');
+  });
+  const fb = document.getElementById('feedback');
+  fb.textContent = q.feedback;
+  fb.className = 'feedback show ' + (i === q.ans ? 'correct' : 'wrong');
+  if (i === q.ans) score++;
+  document.getElementById('q-score').textContent = score;
+  document.getElementById('btn-next').disabled = false;
+}
+
+function nextQ() {
+  currentQ++;
+  if (currentQ >= questions.length) { showScore(); return; }
+  renderQ();
+}
+
+function showScore() {
+  document.getElementById('q-container').innerHTML = '';
+  document.getElementById('btn-next').disabled = true;
+  const pct = Math.round((score / questions.length) * 100);
+  const msgs = ['Keep going — revisit the doctrine and SNC tabs.','Good effort — focus on the remoteness rules and Smith New Court.','Good work — review the Royscot fiction and causation break.','Excellent — strong command of the subject.','Outstanding — full marks!'];
+  const msg = score <= 4 ? msgs[0] : score <= 6 ? msgs[1] : score <= 7 ? msgs[2] : score <= 9 ? msgs[3] : msgs[4];
+  const card = document.getElementById('score-card');
+  document.getElementById('score-big').textContent = score + '/' + questions.length;
+  document.getElementById('score-msg').textContent = msg;
+  card.classList.add('show');
+}
+
+function restartQuiz() {
+  quizStarted = false;
+  startQuiz();
+}
+</script>
+</body>
+</html>
